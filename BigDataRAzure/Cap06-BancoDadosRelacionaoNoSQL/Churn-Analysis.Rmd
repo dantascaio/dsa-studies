@@ -1,0 +1,176 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+# Carregando os pacotes
+library(plyr)
+library(corrplot)
+library(ggplot2)
+library(gridExtra)
+library(ggthemes)
+library(caret)
+library(MASS)
+library(randomForest)
+library(party)
+library(Rcpp)
+```
+```{r}
+churn <- read.csv('Telco-Customer-Churn.csv')
+View(churn)
+```
+
+
+```{r}
+#Analyse  Dataframe
+summary(churn)
+```
+```{r}
+#remove NAs from column TotalCharges
+churn <- na.omit(churn)
+```
+
+```{r}
+# replace "No internet service" for "No"
+churn[, 10:15][ churn[, 10:15] == "No internet service"] <- "No"
+
+```
+```{r}
+churn$MultipleLines <- as.factor(mapvalues(churn$MultipleLines, from = c("No phone service"), to = c("No")))
+```
+
+```{r}
+#Data Binning 
+binning <- function(tenure){
+  if(tenure <= 12) return("0-12 Month")
+  else if(tenure <= 24) return("12-24 Month")
+  else if(tenure <= 48) return("24-48 Month")
+  else if(tenure <= 60) return("48-60 Month")
+  else if(tenure > 60) return("> 60 Month")
+}
+churn$tenure_group <- sapply(churn$tenure, binning)
+churn$tenure_group <- as.factor(churn$tenure_group)
+```
+```{r}
+churn$SeniorCitizen <- as.factor(mapvalues(churn$SeniorCitizen, c(0,1), c("No", "Yes")))
+```
+```{r}
+churn$customerID <- NULL
+churn$tenure <- NULL
+```
+
+```{r}
+numeric_variables <- sapply(churn, is.numeric)
+corrplot(cor(churn[,numeric_variables]), main="\n\nCorrelation graph - Numeric variables", method="number")
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+```{r}
+churn$TotalCharges <- NULL
+```
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+```{r}
+p1 <- ggplot(churn, aes(x=gender)) + ggtitle("Gender") + xlab("Sexo") +
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p2 <- ggplot(churn, aes(x=SeniorCitizen)) + ggtitle("Senior Citizen") + xlab("Senior Citizen") + 
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p3 <- ggplot(churn, aes(x=Partner)) + ggtitle("Partner") + xlab("Parceiros") + 
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p4 <- ggplot(churn, aes(x=Dependents)) + ggtitle("Dependents") + xlab("Dependentes") +
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+grid.arrange(p1, p2, p3, p4, ncol=2)
+```
+```{r}
+p5 <- ggplot(churn, aes(x=PhoneService)) + ggtitle("Phone Service") + xlab("Telefonia") +
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p6 <- ggplot(churn, aes(x=MultipleLines)) + ggtitle("Multiple Lines") + xlab("Múltiplas Linhas") + 
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p7 <- ggplot(churn, aes(x=InternetService)) + ggtitle("Internet Service") + xlab("Internet Service") + 
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p8 <- ggplot(churn, aes(x=OnlineSecurity)) + ggtitle("Online Security") + xlab("Online Security") +
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+grid.arrange(p5, p6, p7, p8, ncol=2)
+
+```
+```{r}
+p9 <- ggplot(churn, aes(x=OnlineBackup)) + ggtitle("Online Backup") + xlab("Online Backup") +
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p10 <- ggplot(churn, aes(x=DeviceProtection)) + ggtitle("Device Protection") + xlab("Device Protection") + 
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p11 <- ggplot(churn, aes(x=TechSupport)) + ggtitle("Tech Support") + xlab("Tech Support") + 
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p12 <- ggplot(churn, aes(x=StreamingTV)) + ggtitle("Streaming TV") + xlab("Streaming TV") +
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+grid.arrange(p9, p10, p11, p12, ncol=2)
+```
+```{r}
+p13 <- ggplot(churn, aes(x=StreamingMovies)) + ggtitle("Streaming Movies") + xlab("Streaming Movies") +
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p14 <- ggplot(churn, aes(x=Contract)) + ggtitle("Contract") + xlab("Contract") + 
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p15 <- ggplot(churn, aes(x=PaperlessBilling)) + ggtitle("Paperless Billing") + xlab("Paperless Billing") + 
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p16 <- ggplot(churn, aes(x=PaymentMethod)) + ggtitle("Payment Method") + xlab("Payment Method") +
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+p17 <- ggplot(churn, aes(x=tenure_group)) + ggtitle("Tenure Group") + xlab("Tenure Group") +
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 0.5) + ylab("Percentual") + coord_flip() + theme_minimal()
+grid.arrange(p13, p14, p15, p16, p17, ncol=2)
+```
+```{r}
+churn$Churn <- as.factor(mapvalues(churn$Churn, c("No", "Yes"), c(0,1)))
+intrain <- createDataPartition(churn$Churn,p=0.7,list=FALSE)
+set.seed(2017)
+training <- churn[intrain,]
+testing <- churn[-intrain,]
+```
+```{r}
+#Logistic Model
+
+LogModel <- glm(Churn ~ ., family=binomial(link="logit"), data=training)
+print(summary(LogModel))
+```
+```{r}
+anova(LogModel, test="Chisq")
+```
+
+
+```{r}
+testing$Churn <- as.character(testing$Churn)
+fitted.results <- predict(LogModel,newdata=testing,type='response')
+fitted.results <- ifelse(fitted.results > 0.5,1,0)
+misClasificError <- mean(fitted.results != testing$Churn)
+print(paste('Logistic Regression Accuracy',1-misClasificError))
+```
+
+```{r}
+print("Confusion Matrix for Logistic Regression"); table(testing$Churn, fitted.results > 0.5)
+```
+
+```{r}
+exp(cbind(OR=coef(LogModel), confint(LogModel)))
+```
+```{r}
+#Decision tree
+#str(training)
+tree <- ctree(Churn ~ as.factor(Contract)+as.factor(tenure_group)+as.factor(PaperlessBilling), training)
+plot(tree, type='simple')
+```
+```{r}
+# Decision Tree Confusion Matrix
+pred_tree <- predict(tree, testing)
+print("Confusion Matrix Para Decision Tree"); table(Predicted = pred_tree, Actual = testing$Churn)
+```
+```{r}
+# Decision tree precisionb
+p1 <- predict(tree, training)
+tab1 <- table(Predicted = p1, Actual = training$Churn)
+tab2 <- table(Predicted = pred_tree, Actual = testing$Churn)
+print(paste('Decision Tree Accuracy',sum(diag(tab2))/sum(tab2)))
+```
+
