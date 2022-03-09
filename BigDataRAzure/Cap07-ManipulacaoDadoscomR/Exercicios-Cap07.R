@@ -10,6 +10,7 @@ setwd("C:/FCD/BigDataRAzure/Cap08")
 getwd()
 
 # Formatando os dados de uma página web
+install.packages("rvest")
 library(rvest)
 library(stringr)
 library(tidyr)
@@ -38,11 +39,29 @@ tabela_txt =
 df<-  data.frame(tabela_txt)
 
 
-# Exercício 6 - Remova as duas primeiras linhas e adicione nomes as colunas
+####################CORRECAO####################
+pagina <- read_html(url)
+tabela <- html_nodes(pagina, 'table')
+class(tabela)
 
+tabela <- html_nodes(pagina, "table")
+tabela_txt = 
+  tabela %>%
+  html_text2() 
+# Exercício 5 - Converta o item anterior em um dataframe
+df<-  data.frame(tabela)
+
+# Exercício 6 - Remova as duas primeiras linhas e adicione nomes as colunas
+df2 <- df[-(1:2), ]
+df2 <- data.frame(df2)
+colnames(df2) <-  "Results"
 
 # Exercício 7 - Converta de algarismos romanos para números inteiros
+head(df2)
+separate(df2, "Results", into = c("Index", "Result"), sep="\\s", extra = "merge")
+df2 %>% separate("Results", into = c("Index", "Result"), sep="\\s", extra = "merge") -> df3
 
+df3 <- transform(df3, Index = as.numeric(as.roman(df3$Index)))
 
 # Exercício 8 - Divida as colunas em 4 colunas
 
